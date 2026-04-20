@@ -40,6 +40,10 @@ const SAVE_INTERVAL_MS = 10_000;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Player'>;
 
+// Module-level flag — survives component re-mounts caused by navigation.
+// useRef resets on every new component instance; this does not.
+let _playerInitialized = false;
+
 export default function PlayerScreen({ route }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { state: playbackState } = usePlaybackState();
@@ -52,17 +56,23 @@ export default function PlayerScreen({ route }: Props) {
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekValue, setSeekValue] = useState(0);
 
-  const playerSetUp    = useRef(false);
-  const pendingSeekRef = useRef(0);       // position to seek to after track loads
+  const pendingSeekRef = useRef(0);
   const saveTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentTitle   = useRef<string | null>(null);
 
   // ── Player setup (once per app session) ───────────────────────────────────
   useEffect(() => {
-    if (playerSetUp.current) return;
-    playerSetUp.current = true;
+    if (_playerInitialized) return;
+    _playerInitialized = true;
 
-    TrackPlayer.setupPlayer({ autoHandleInterruptions: true }).then(async () => {
+    // Catch player_already_initialized in case the service restarted before us
+    const setup = TrackPlayer.setupPlayer({ autoHandleInterruptions: true })
+      .catch((e: any) => {
+        if (e?.code === 'player_already_initialized') return;
+        throw e;
+      });
+
+    setup.then(async () => {
       // Ensure options are always set even if AudioService background task ran early
       await TrackPlayer.updateOptions({
         android: {
@@ -107,7 +117,7 @@ export default function PlayerScreen({ route }: Props) {
 
   // ── Reload if navigation params change (user picked a new file in Library) ─
   useEffect(() => {
-    if (!route.params || !playerSetUp.current) return;
+    if (!route.params || !_playerInitialized) return;
     const { trackTitle: t, trackUri: u, startPosition: sp } = route.params;
     if (t !== currentTitle.current) {
       loadTrack(t, u, sp);
