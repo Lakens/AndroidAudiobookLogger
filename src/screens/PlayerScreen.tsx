@@ -12,6 +12,8 @@ import {
 import Slider from '@react-native-community/slider';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import TrackPlayer, {
+  AppKilledPlaybackBehavior,
+  Capability,
   Event,
   State,
   usePlaybackState,
@@ -61,6 +63,27 @@ export default function PlayerScreen({ route }: Props) {
     playerSetUp.current = true;
 
     TrackPlayer.setupPlayer({ autoHandleInterruptions: true }).then(async () => {
+      // Ensure options are always set even if AudioService background task ran early
+      await TrackPlayer.updateOptions({
+        android: {
+          appKilledPlaybackBehavior:
+            AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+        },
+        capabilities: [
+          Capability.Play, Capability.Pause, Capability.SeekTo,
+          Capability.JumpForward, Capability.JumpBackward,
+          Capability.SkipToPrevious, Capability.SkipToNext,
+        ],
+        compactCapabilities: [Capability.Play, Capability.Pause, Capability.JumpForward],
+        notificationCapabilities: [
+          Capability.SkipToPrevious, Capability.JumpBackward,
+          Capability.Play, Capability.Pause,
+          Capability.JumpForward, Capability.SkipToNext,
+        ],
+        forwardJumpInterval: 30,
+        backwardJumpInterval: 30,
+      });
+
       if (route.params) {
         // Opened from Library with explicit track
         const { trackTitle: t, trackUri: u, startPosition: sp } = route.params;

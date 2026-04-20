@@ -6,4 +6,4 @@ import TrackPlayer from 'react-native-track-player';
 AppRegistry.registerComponent(appName, () => App);
 
 // Register the background playback service — must be called before any player use
-TrackPlayer.registerPlaybackService(() => require('./src/services/AudioService'));
+TrackPlayer.registerPlaybackService(() => require('./src/services/AudioService').default);
