@@ -55,50 +55,33 @@ export default function SettingsScreen() {
 
   async function checkPermission() {
     if (Platform.OS !== 'android') { setStorageGranted(true); return; }
-    const ver = Number(Platform.Version);
-    if (ver >= 33) {
-      const result = await check(PERMISSIONS.ANDROID.READ_MEDIA_AUDIO);
-      setStorageGranted(result === RESULTS.GRANTED);
-    } else if (ver >= 30) {
-      try {
-        const testPath = `${RNFS.ExternalStorageDirectoryPath}/.rn_perm_test`;
-        await RNFS.writeFile(testPath, '', 'utf8');
-        await RNFS.unlink(testPath);
-        setStorageGranted(true);
-      } catch {
-        setStorageGranted(false);
-      }
-    } else {
-      const result = await check(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
-      setStorageGranted(result === RESULTS.GRANTED);
+    // We need "All files access" to write the timestamp log to arbitrary paths
+    // (e.g. OneDrive/Obsidian). READ_MEDIA_AUDIO alone is not enough.
+    try {
+      const testPath = `${RNFS.ExternalStorageDirectoryPath}/.rn_perm_test`;
+      await RNFS.writeFile(testPath, '', 'utf8');
+      await RNFS.unlink(testPath);
+      setStorageGranted(true);
+    } catch {
+      setStorageGranted(false);
     }
   }
 
   async function requestPermission() {
-    const ver = Number(Platform.Version);
-    if (ver >= 33) {
-      const result = await request(PERMISSIONS.ANDROID.READ_MEDIA_AUDIO);
-      setStorageGranted(result === RESULTS.GRANTED);
-    } else if (ver >= 30) {
-      Alert.alert(
-        'Storage Permission',
-        'Android 11+ requires "All files access" to browse your audio folder.\n\n'
-        + 'Tap "Open Settings", then enable "Allow management of all files".',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Open Settings',
-            onPress: () =>
-              Linking.sendIntent('android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION', [
-                { key: 'package', value: 'com.audiobooknotetaker' },
-              ]).catch(() => Linking.openSettings()),
-          },
-        ],
-      );
-    } else {
-      const result = await request(PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE);
-      setStorageGranted(result === RESULTS.GRANTED);
-    }
+    Alert.alert(
+      'All Files Access needed',
+      'Writing the timestamp log to your Obsidian vault requires "Allow management of all files".\n\n'
+      + 'Tap "Open Settings", find AudiobookNotetaker, then enable "All files access".',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Settings',
+          onPress: () =>
+            Linking.sendIntent('android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION')
+              .catch(() => Linking.openSettings()),
+        },
+      ],
+    );
   }
 
   async function saveFolderPath() {
@@ -198,7 +181,7 @@ export default function SettingsScreen() {
       {storageGranted === false && (
         <TouchableOpacity style={s.permBanner} onPress={requestPermission}>
           <Text style={s.permBannerText}>
-            ⚠  Storage permission needed — tap to grant
+            ⚠  "All files access" needed to write timestamp log — tap to grant
           </Text>
         </TouchableOpacity>
       )}

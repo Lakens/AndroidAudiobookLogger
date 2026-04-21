@@ -40,6 +40,7 @@ export default async function () {
       ],
       forwardJumpInterval: 30,
       backwardJumpInterval: 30,
+      color: 0xFFA0C4FF,
     });
   } catch (_) {}
 

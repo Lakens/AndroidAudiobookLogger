@@ -69,7 +69,7 @@ index.js
 
 **Permissions:**
 - `READ_MEDIA_AUDIO` (Android 13+) — to scan the configured audio folder
-- `MANAGE_EXTERNAL_STORAGE` (Android 11-12) — same purpose on older Android
+- `MANAGE_EXTERNAL_STORAGE` — to write `timestamp_log.json` to an arbitrary path (e.g. OneDrive/Obsidian). Required on all Android versions; granted via the "All files access" toggle in Settings.
 - `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MEDIA_PLAYBACK` — background audio
 - `WAKE_LOCK` — keep CPU awake during playback
 
@@ -177,10 +177,10 @@ The release build bundles the JavaScript inside the APK so the app works **witho
 ### 3. Install on the phone
 
 ```powershell
-adb install -r android\app\build\outputs\apk\release\app-release-unsigned.apk
+adb install -r android\app\build\outputs\apk\release\app-release.apk
 ```
 
-The `-r` flag reinstalls over an existing version without wiping data. The APK is unsigned, which is fine for personal use via `adb install`.
+The `-r` flag reinstalls over an existing version without wiping data. The APK is signed with a debug key, which is fine for personal use via `adb install`.
 
 ### 4. Port-forward Metro to the phone
 
@@ -224,11 +224,9 @@ Rebuild the APK only when you change:
 
 Open the app and navigate to the **Settings** tab.
 
-- **Android 13+:** A red banner appears. Tap it — the system shows a standard permission dialog. Tap **Allow**.
-- **Android 11-12:** Tap the banner — the app opens the *"All files access"* special settings page. Toggle it on.
-- **Android 10 and below:** The system permission dialog appears automatically.
+If a red banner appears saying *"All files access needed"*, tap it. The app opens the global **All files access** list in Android Settings. Find **AudiobookNotetaker** in the list and toggle it on.
 
-The Library tab needs this permission to scan your audio folder. The Player tab works without it because the file picker has its own access.
+This permission is required to write `timestamp_log.json` to your Obsidian vault (or any arbitrary folder outside the app sandbox). It is separate from the media-read permission that covers audio playback — audio can work without it, but timestamp writing cannot.
 
 ---
 
@@ -377,7 +375,39 @@ $env:PATH = "C:\Users\<you>\AppData\Local\Android\Sdk\platform-tools;" + $env:PA
 
 React Native 0.83 compiles native C++ code (Hermes VM, Fabric renderer, JSI) from source on the first build. This is normal. Do not interrupt it. All subsequent incremental builds are fast.
 
-### 10. react-native-document-picker v9 removed GuardedResultAsyncTask
+### 10. READ_MEDIA_AUDIO is not enough to write files — MANAGE_EXTERNAL_STORAGE is required separately
+
+Android has two completely separate storage permission axes:
+
+- **`READ_MEDIA_AUDIO`** — lets the app read media files (audio, video, images) that live in media-scanned locations. This is what enables scanning the audio library folder.
+- **`MANAGE_EXTERNAL_STORAGE`** — lets the app read and write *arbitrary* files anywhere on external storage. This is what enables writing `timestamp_log.json` into an Obsidian vault (or any non-media path such as an OneDrive sync folder).
+
+Granting audio access does **not** imply any write access to non-media paths. An app can play audiobooks from a folder it cannot write to. Both permissions are needed for this app's full functionality.
+
+`MANAGE_EXTERNAL_STORAGE` is a special permission ("All files access") that cannot be requested via the normal runtime permission dialog. The only way to grant it is to send the user to the dedicated Settings page. The correct intent is:
+
+```javascript
+// CORRECT — opens the global "All files access" list; user finds the app and toggles it
+Linking.sendIntent('android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION')
+```
+
+Two common mistakes:
+
+```javascript
+// WRONG — MANAGE_APP_ALL_FILES_ACCESS_PERMISSION with intent extras opens a read-only
+// app-info page on most devices, not the toggle.
+Linking.sendIntent('android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION', [
+  { key: 'package', value: 'com.example.app' },
+])
+
+// WRONG — ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION requires the package URI
+// as the intent data URI, not as an extra. Linking.sendIntent cannot set a data URI,
+// so the intent arrives without the required data and opens the wrong screen.
+```
+
+The global `MANAGE_ALL_FILES_ACCESS_PERMISSION` intent is the most reliable cross-version approach.
+
+### 11. react-native-document-picker v9 removed GuardedResultAsyncTask
 
 The old `react-native-document-picker` package broke in RN 0.73+ because `GuardedResultAsyncTask` was removed from React Native. The replacement package is `@react-native-documents/picker` with a different API:
 
@@ -425,6 +455,12 @@ A: Open a file manager on the phone, navigate to your folder, and use Properties
 
 **Q: The Library tab shows no files.**
 A: (1) Check the storage permission banner in Settings. (2) Tap Test next to the folder path. (3) Pull to refresh in the Library tab.
+
+**Q: I can play audio files but the timestamp log gives a "permission denied" error.**
+A: These are two different permissions. Audio playback uses `READ_MEDIA_AUDIO`; writing the timestamp log to an Obsidian/OneDrive folder requires `MANAGE_EXTERNAL_STORAGE` ("All files access"). Open Settings in the app — if the red banner appears, tap it and enable All files access for AudiobookNotetaker.
+
+**Q: The "Open Settings" button for storage permission opens a read-only app info page instead of a toggle.**
+A: This happens when the intent `MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` is sent without a proper data URI (a React Native `Linking` limitation). The fix is to use `MANAGE_ALL_FILES_ACCESS_PERMISSION` instead, which opens the global All Files Access list where you can toggle the app.
 
 **Q: Changes to JS files do not appear on the phone.**
 A: Shake the phone to open the dev menu and tap Reload, or press `r` in the Metro terminal.

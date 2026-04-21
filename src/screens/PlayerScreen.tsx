@@ -92,6 +92,7 @@ export default function PlayerScreen({ route }: Props) {
         ],
         forwardJumpInterval: 30,
         backwardJumpInterval: 30,
+        color: 0xFFA0C4FF,
       });
 
       if (route.params) {
@@ -296,14 +297,14 @@ export default function PlayerScreen({ route }: Props) {
       {/* Transport */}
       <View style={s.controls}>
         <TouchableOpacity style={s.ctrlBtn} onPress={() => skip(-30)}>
-          <Text style={s.ctrlIcon}>⏪</Text>
+          <View style={s.ctrlCircle}><Text style={s.ctrlIcon}>⏪</Text></View>
           <Text style={s.ctrlLabel}>30 s</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.playBtn} onPress={togglePlayPause}>
           <Text style={s.playIcon}>{isPlaying ? '⏸' : '▶'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.ctrlBtn} onPress={() => skip(30)}>
-          <Text style={s.ctrlIcon}>⏩</Text>
+          <View style={s.ctrlCircle}><Text style={s.ctrlIcon}>⏩</Text></View>
           <Text style={s.ctrlLabel}>30 s</Text>
         </TouchableOpacity>
       </View>
@@ -372,8 +373,9 @@ const s = StyleSheet.create({
   timeText: { color: '#888', fontSize: 12, width: 46, textAlign: 'center' },
   slider: { flex: 1, height: 36 },
   controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 28, marginBottom: 14 },
-  ctrlBtn: { alignItems: 'center', gap: 2 },
-  ctrlIcon: { fontSize: 30, color: '#eee' },
+  ctrlBtn: { alignItems: 'center', gap: 4 },
+  ctrlCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#a0c4ff', alignItems: 'center', justifyContent: 'center' },
+  ctrlIcon: { fontSize: 24, color: '#1a1a2e' },
   ctrlLabel: { fontSize: 11, color: '#888' },
   playBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#a0c4ff', alignItems: 'center', justifyContent: 'center' },
   playIcon: { fontSize: 34, color: '#1a1a2e' },
