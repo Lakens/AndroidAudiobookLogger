@@ -158,23 +158,29 @@ All commands use **PowerShell**. Note: the `&&` operator does not work in Window
 $env:PATH = "C:\Users\<you>\AppData\Local\Android\Sdk\platform-tools;" + $env:PATH
 ```
 
-### 2. Build the debug APK
+### 2. Build the release APK
 
 ```powershell
 cd android
-.\gradlew.bat assembleDebug --no-daemon
+.\gradlew.bat assembleRelease --no-daemon
 cd ..
 ```
 
-The **first build takes 30-90 minutes** — it compiles the React Native C++ core (Hermes, Fabric, JSI) from source. Subsequent incremental builds take 20-60 seconds.
+The **first build takes 30-90 minutes** — it compiles the React Native C++ core (Hermes, Fabric, JSI) from source. Subsequent incremental builds take 20-60 seconds thanks to the Gradle configuration cache (enabled in `gradle.properties`).
+
+The release build bundles the JavaScript inside the APK so the app works **without Metro running** — no USB needed after install.
+
+> **Debug build** (only needed during development to see JS errors on screen):
+> `.\gradlew.bat assembleDebug --no-daemon`
+> APK: `android\app\build\outputs\apk\debug\app-debug.apk`
 
 ### 3. Install on the phone
 
 ```powershell
-adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+adb install -r android\app\build\outputs\apk\release\app-release-unsigned.apk
 ```
 
-The `-r` flag reinstalls over an existing version without wiping data.
+The `-r` flag reinstalls over an existing version without wiping data. The APK is unsigned, which is fine for personal use via `adb install`.
 
 ### 4. Port-forward Metro to the phone
 

@@ -34,7 +34,7 @@ import {
 } from '../utils/timestampManager';
 import type { RootStackParamList } from '../../App';
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SPEEDS = [0.8, 0.9, 1, 1.1, 1.2];
 // Save position to library every N seconds while playing
 const SAVE_INTERVAL_MS = 10_000;
 

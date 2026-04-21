@@ -123,6 +123,7 @@ export default function LibraryScreen() {
 
       {/* File list */}
       <FlatList
+        style={st.list}
         data={tracks}
         keyExtractor={item => item.title}
         renderItem={renderItem}
@@ -161,6 +162,7 @@ const CARD   = '#0f1a30';
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
+  list: { flex: 1 },
   folderBar: {
     backgroundColor: CARD,
     paddingHorizontal: 14,
