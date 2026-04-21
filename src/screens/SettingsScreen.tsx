@@ -45,6 +45,14 @@ export default function SettingsScreen() {
     load();
   }, []);
 
+  // Refresh pending count whenever the screen comes into focus
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      setPendingCount(await getPendingCount());
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function checkPermission() {
     if (Platform.OS !== 'android') { setStorageGranted(true); return; }
     const ver = Number(Platform.Version);
@@ -136,10 +144,25 @@ export default function SettingsScreen() {
     const path = logPath.trim();
     if (!path) return;
     const dir = path.substring(0, path.lastIndexOf('/'));
+    const dirExists = await RNFS.exists(dir);
+    const fileExists = await RNFS.exists(path);
+    let entryCount = '—';
+    if (fileExists) {
+      try {
+        const contents = await RNFS.readFile(path, 'utf8');
+        const entries = JSON.parse(contents);
+        entryCount = Array.isArray(entries) ? String(entries.length) : 'invalid JSON';
+      } catch {
+        entryCount = 'could not read';
+      }
+    }
     Alert.alert(
       'Log path check',
-      `Directory exists: ${await RNFS.exists(dir) ? '✓' : '✗'}\n`
-      + `File exists: ${await RNFS.exists(path) ? '✓' : '✗'}\n\n${path}`,
+      `Directory exists: ${dirExists ? '✓' : '✗'}\n`
+      + `File exists: ${fileExists ? '✓' : '✗'}\n`
+      + `Entries in file: ${entryCount}\n`
+      + `Pending (not yet flushed): ${pendingCount}\n\n`
+      + path,
     );
   }
 
@@ -149,7 +172,16 @@ export default function SettingsScreen() {
     try {
       const n = await flushPendingToLog(path);
       setPendingCount(0);
-      flash(`Flushed ${n} pending timestamp(s).`);
+      if (n === 0) {
+        Alert.alert(
+          'Nothing to flush',
+          'There are no pending timestamps.\n\n'
+          + 'Timestamps marked while a log path was already set are written directly to that file — '
+          + 'use the Test button to see how many entries are currently in the file.',
+        );
+      } else {
+        flash(`Flushed ${n} pending timestamp(s) to log.`);
+      }
     } catch (e: any) {
       Alert.alert('Flush failed', e.message);
     }
