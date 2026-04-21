@@ -1,0 +1,15 @@
+# Core — required for convert.py
+edge-tts>=6.1.9
+PyPDF2>=3.0.0
+requests>=2.28.0
+
+# Optional extraction methods (convert.py --extraction marker / glm-ocr)
+# marker-pdf       # pip install marker-pdf  (requires PyTorch)
+# ollama           # pip install ollama  (requires Ollama running locally)
+# pymupdf          # pip install pymupdf  (required for glm-ocr page rendering)
+
+# Optional TTS alternative (convert.py --tts coqui)
+# TTS              # pip install TTS  (large download, CPU-only)
+
+# Optional LLM cleanup (process_timestamps.py --llm-clean)
+# groq             # pip install groq  (requires GROQ_API_KEY env var)
