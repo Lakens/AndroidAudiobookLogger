@@ -48,6 +48,8 @@ except ImportError:
 
 def clean_text_for_tts(text: str, max_chars: int = 5_000_000) -> str:
     """Strip markdown and scientific notation symbols unsuitable for TTS."""
+    # Remove HTML tags first: <span id="page-0-0">, <sup>, </sup>, </span>, etc.
+    text = re.sub(r'<[^>]+>', '', text)
     text = re.sub(r'-\s*\n\s*', '', text)
     text = re.sub(r'\n{2,}', ' . ', text)
     text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
@@ -55,10 +57,17 @@ def clean_text_for_tts(text: str, max_chars: int = 5_000_000) -> str:
     text = re.sub(r'_{1,2}([^_]+)_{1,2}', r'\1', text)
     text = re.sub(r'\^([^\s^]+)\^?', '', text)
     text = re.sub(r'`[^`]*`', '', text)
+    # Remove footnote marker links before general link processing:
+    # [1](#page-0-1), [⁎](#page-0-0) → remove entirely
+    text = re.sub(r'\[[\s\d⁎☆†‡§¶*⁺]+\]\(#[^)]+\)', '', text)
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
     text = re.sub(r'!\[[^\]]*\]\([^\)]+\)', '', text)
+    # Unescape markdown backslash-escapes left in link labels: \( → (, \) → ), \[ → [, \] → ]
+    text = text.replace('\\(', '(').replace('\\)', ')').replace('\\[', '[').replace('\\]', ']')
     text = re.sub(r'\[([^\]]+)\]', r'\1', text)
     text = re.sub(r'\{([^}]+)\}', r'\1', text)
+    # Remove standalone footnote symbols (☆, ⁎) that TTS reads as "asterisk" etc.
+    text = re.sub(r'(?<!\w)[☆⁎†‡§](?!\w)', '', text)
     text = re.sub(r'\$\$[^$]*?\$\$', '', text, flags=re.DOTALL)
     text = re.sub(r'\$[^$\n]+?\$', '', text)
     text = re.sub(r'\$', '', text)
